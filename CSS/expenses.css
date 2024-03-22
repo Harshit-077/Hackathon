@@ -1,0 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(to bottom, #b080b4, #e7d1ad);
+    color: #333;
+    transition: background-color 0.5s ease, color 0.5s ease;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+
+
+.container {
+    max-width: 400px;
+    margin-top: 50px;
+    padding: 40px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.5s ease, box-shadow 0.5s ease;
+}
+
+
+#expense-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#expense-form input[type="text"],
+#expense-form input[type="number"] {
+    margin-bottom: 10px;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background-color: rgba(192, 138, 191, 0.5);
+    color: #333;
+    transition: background-color 0.5s ease;
+}
+
+#expense-form button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    background-color: #b080b4;
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 0.5s ease;
+}
+
+#expense-form button:hover {
+    background-color: #9b6395;
+}
+#add-expense{
+    margin-bottom: 10px;
+    margin-top: 10px;
+}
+.chart-container {
+    margin-top: 20px;
+}

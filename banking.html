@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic Banking System</title>
+    <link rel="stylesheet" href="CSS/banking.css">
+    <style type="text/css">
+        .container {
+            margin-right: 50px;
+            margin-left: 50px;
+        }
+
+        .logo {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100px;
+        }
+
+        .title {
+            color: white;
+            margin-top: 10px;
+            margin-bottom: -5px;
+            margin-left: -17px;
+            font-family: 'Gabriela', serif;
+            font-size: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div><img src="img/bank_logo.jpg" class="logo"></div>
+        <div class="title">MoneyWise Bank</div>
+
+        <div class="navbar">
+            <br />
+            <a class="active" href="index.html">Home</a>
+            <a href="php/customer.php">View Customers</a>
+            <a href="php/transfermoney.php">Transfer Money</a>
+            <a href="php/transaction.php">Transaction History</a>
+            <br />
+        </div>
+    </div>
+
+    <div class="welcome"> <!-- class: container-->
+        <div class="header"> Welcome to MOneyWise Bank! </div>
+        <img src="img/bank.png" height=65% width=30% alt="Welcome to the Sparks Bank!"
+            style="padding: 5px; margin-right: 8vw; margin-top:8vh; float:right">
+    </div>
+
+    <section class="features">
+        <div class="servicesBox">
+            <strong>Our Services</strong>
+        </div>
+
+        <div class="feature-row">
+            <div class="feature-col">
+                <img src="/img/customers.png">
+                <h2><a href="/php/customer.php"> Our Customers</a></h2>
+            </div>
+            <div class="feature-col">
+                <img src="img/transfer.png">
+                <h2><a href="/php/transfermoney.php"> Transfer Money</a></h2>
+            </div>
+            <div class="feature-col">
+                <img src="img/piggy.png">
+                <h2><a href="/php/transaction.php"> All Transactions</a></h2>
+            </div>
+        </div>
+    </section>
+
+    <div class="footer">
+        Designed and Developed by Fathima Zulaikha
+    </div>
+</body>
+
+</html>
