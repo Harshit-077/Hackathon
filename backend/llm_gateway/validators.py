@@ -6,10 +6,16 @@ import json
 import re
 from typing import Any
 
-VALID_ACTIONS = {"explain", "compare", "resize", "filter", None}
+VALID_ACTIONS = {
+    "explain", "compare", "resize", "filter",
+    "focus", "open", "details", "close", "highlight", "scroll", None,
+}
 VALID_ENTITIES = {
     "revenue", "users", "conversion", "churn", "retention",
-    "geographic", "date_filter", "summary", "date", None,
+    "geographic", "date_filter", "summary", "date",
+    "laptop-workspace", "phone-dashboard", "monitor-panel", "bottle-card",
+    "laptop_workspace", "phone_dashboard", "monitor_panel", "bottle_card",
+    None,
 }
 
 
@@ -32,9 +38,19 @@ def normalize_semantic(raw: dict[str, Any]) -> dict[str, Any]:
 
     entity = raw.get("entity")
     if entity:
-        entity = str(entity).lower().replace(" ", "_")
-        if entity == "date":
-            entity = "date_filter"
+        entity = str(entity).lower().strip()
+        entity = entity.replace(" ", "_")
+        aliases = {
+            "date": "date_filter",
+            "laptop_workspace": "laptop-workspace",
+            "phone_dashboard": "phone-dashboard",
+            "monitor_panel": "monitor-panel",
+            "bottle_card": "bottle-card",
+            "laptop": "laptop-workspace",
+            "monitor": "monitor-panel",
+            "phone": "phone-dashboard",
+        }
+        entity = aliases.get(entity, entity)
         if entity not in VALID_ENTITIES:
             entity = None
 

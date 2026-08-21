@@ -15,8 +15,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 
 from backend.engine.decision_log import decision_log
+from backend.engine.fallback import fallback_manager
 from backend.engine.orchestrator import IntentEngine
+from backend.events.bus import event_bus
 from backend.llm_gateway.gateway import generate_explanation, get_provider_info, resolve_semantic
+from backend.memory.redis_cache import get_cache
+from backend.memory.repository import get_repository
 from backend.models.schemas import ClientEvent, EngineResponse
 
 load_dotenv()
@@ -46,12 +50,16 @@ engine = IntentEngine(
 @app.get("/health")
 async def health() -> dict:
     info = get_provider_info()
+    snap = fallback_manager.snapshot()
     return {
         "status": "ok",
         "service": "intent-engine",
         "llm_provider": info["provider"],
         "gemini_configured": bool(os.getenv("GEMINI_API_KEY")),
         "groq_configured": bool(os.getenv("GROQ_API_KEY")),
+        "redis_ok": get_cache().redis_ok,
+        "postgres_ok": get_repository().postgres_ok,
+        "degraded_modes": snap.get("modes", []),
     }
 
 
@@ -67,7 +75,20 @@ async def debug(session_id: str | None = None, limit: int = 50) -> dict:
         "count": len(entries),
         "llm_provider": info["provider"],
         "fallback_count": info["fallback_count"],
+        "events": event_bus.recent(session_id, limit=limit),
+        "redis_ok": get_cache().redis_ok,
+        "postgres_ok": get_repository().postgres_ok,
     }
+
+
+@app.post("/debug/fallback")
+async def debug_fallback(payload: dict) -> dict:
+    """Demo control: disable Redis without crashing the engine."""
+    if payload.get("redis") is False:
+        get_cache().disable()
+        fallback_manager.redis_failed()
+    snap = fallback_manager.snapshot()
+    return {"ok": True, "redis_ok": get_cache().redis_ok, "modes": snap.get("modes", [])}
 
 
 def _error_response(session_id: str, message: str) -> dict:

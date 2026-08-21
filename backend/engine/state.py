@@ -36,6 +36,7 @@ class SessionState:
     last_resolved_targets: list[str] = field(default_factory=list)
     pending: PendingClarification | None = None
     ui_elements: list[dict[str, Any]] = field(default_factory=list)
+    vision_objects: list[dict[str, Any]] = field(default_factory=list)
 
     def add_turn(self, turn: dict[str, Any]) -> None:
         self.turns.append(turn)

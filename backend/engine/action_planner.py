@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from backend.engine.action_safety import sanitize_plan
+
 
 def build_action_plan(
     action: str,
@@ -17,12 +19,12 @@ def build_action_plan(
 ) -> list[dict[str, Any]]:
     """Translate resolved intent into frontend-executable action steps."""
     plan: list[dict[str, Any]] = []
+    primary = targets[0] if targets else ""
 
     if action == "explain":
-        target = targets[0] if targets else ""
-        plan.append({"type": "highlight", "target": target, "params": {"duration_ms": 2000}})
+        plan.append({"type": "highlight", "target": primary, "params": {"duration_ms": 2000}})
         if explanation_text:
-            plan.append({"type": "speak", "target": target, "params": {"text": explanation_text}})
+            plan.append({"type": "speak", "target": primary, "params": {"text": explanation_text}})
 
     elif action == "compare":
         for t in targets[:2]:
@@ -35,11 +37,29 @@ def build_action_plan(
             })
 
     elif action == "resize":
-        target = targets[0] if targets else ""
-        plan.append({"type": "resize", "target": target, "params": {"scale": 1.5}})
+        plan.append({"type": "resize", "target": primary, "params": {"scale": 1.5}})
 
     elif action == "filter":
-        target = targets[0] if targets else ""
-        plan.append({"type": "navigate", "target": "filter_panel", "params": {"element": target}})
+        plan.append({"type": "navigate", "target": "filter_panel", "params": {"element": primary}})
 
-    return plan
+    elif action in {"focus", "highlight"}:
+        plan.append({"type": "highlight", "target": primary, "params": {"duration_ms": 2800}})
+
+    elif action == "open":
+        plan.append({"type": "highlight", "target": primary, "params": {"duration_ms": 2000}})
+        plan.append({"type": "navigate", "target": "open_panel", "params": {"element": primary}})
+
+    elif action == "details":
+        plan.append({"type": "highlight", "target": primary, "params": {"duration_ms": 2000}})
+        plan.append({"type": "navigate", "target": "details_panel", "params": {"element": primary}})
+
+    elif action == "close":
+        plan.append({"type": "navigate", "target": "close_panel", "params": {"element": primary}})
+
+    elif action == "scroll":
+        plan.append({"type": "navigate", "target": "scroll", "params": {"element": primary}})
+
+    if explanation_text and action not in {"explain"}:
+        plan.append({"type": "speak", "target": primary, "params": {"text": explanation_text}})
+
+    return sanitize_plan(plan)

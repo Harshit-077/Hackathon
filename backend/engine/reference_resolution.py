@@ -32,20 +32,25 @@ def resolve_references(
     """
     resolved: dict[str, str | None] = {}
 
+    history_pronouns = {"it", "its", "uske", "iske", "usko"}
+    this_pronouns = {"this", "isko", "ye", "yeh", "ye wala", "yeh wala"}
+    that_pronouns = {"that", "those", "wo wala", "woh"}
+
     for ref in references:
-        if ref == "this":
+        key = ref.lower()
+        if key in this_pronouns:
             resolved[ref] = pointer_element_id or spatial_top_id
-        elif ref == "it":
+        elif key in history_pronouns:
             resolved[ref] = session.last_resolved_element_id
-        elif ref == "that":
+        elif key in that_pronouns:
             if spatial_second_id and spatial_second_id != spatial_top_id:
                 resolved[ref] = spatial_second_id
             elif len(session.last_resolved_targets) >= 2:
                 resolved[ref] = session.last_resolved_targets[-2]
             else:
-                resolved[ref] = spatial_second_id
+                resolved[ref] = pointer_element_id or spatial_top_id or session.last_resolved_element_id
         else:
-            resolved[ref] = None
+            resolved[ref] = session.last_resolved_element_id
 
     return resolved
 
@@ -104,20 +109,22 @@ def build_single_target(
 
     refs = semantic.get("references", [])
 
-    # "it" always refers to conversation history
-    if "it" in refs and session.last_resolved_element_id:
+    history_pronouns = {"it", "its", "uske", "iske", "usko"}
+    this_pronouns = {"this", "isko", "ye", "yeh", "ye wala", "yeh wala"}
+
+    if any(r in history_pronouns for r in refs) and session.last_resolved_element_id:
         return session.last_resolved_element_id
 
-    # "this" with no pointer hit → fall back to recent context
-    if "this" in refs and not pointer_element_id:
+    if any(r in this_pronouns for r in refs) and not pointer_element_id:
         if session.last_resolved_element_id:
             return session.last_resolved_element_id
-        if ref_map.get("this"):
-            return ref_map["this"]
+        for pronoun in refs:
+            if pronoun in this_pronouns and ref_map.get(pronoun):
+                return ref_map[pronoun]
 
     if refs:
-        for pronoun in ("this", "that"):
-            if pronoun in refs and ref_map.get(pronoun):
+        for pronoun in refs:
+            if ref_map.get(pronoun):
                 return ref_map[pronoun]
 
     if top_candidate_id:

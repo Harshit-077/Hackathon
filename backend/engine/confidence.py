@@ -68,3 +68,47 @@ def fuse_with_llm_raw(
     """Blend deterministic fusion (70%) with LLM raw confidence (30%)."""
     base = fuse_confidence(spatial, semantic, recency)
     return max(0.0, min(1.0, 0.7 * base + 0.3 * llm_raw_confidence))
+
+
+EXECUTE_THRESHOLD = 0.80
+CONFIRM_THRESHOLD = 0.55
+
+DEFAULT_EVIDENCE_WEIGHTS = {
+    "voice": 0.18,
+    "vision": 0.18,
+    "spatial": 0.12,
+    "temporal": 0.10,
+    "conversation": 0.14,
+    "ui": 0.14,
+    "agreement": 0.14,
+}
+
+
+class ConfidenceEngine:
+    """Fuse only provided evidence — missing modalities are omitted, not invented."""
+
+    def __init__(self, weights: dict[str, float] | None = None) -> None:
+        self.weights = weights or DEFAULT_EVIDENCE_WEIGHTS
+
+    def fuse(self, evidence: dict[str, float | None]) -> dict:
+        present = {
+            k: float(v)
+            for k, v in evidence.items()
+            if v is not None and k in self.weights
+        }
+        if not present:
+            return {"confidence": 0.0, "evidence": {}, "decision": "clarify"}
+        weight_sum = sum(self.weights[k] for k in present)
+        confidence = sum(present[k] * self.weights[k] for k in present) / weight_sum
+        confidence = max(0.0, min(1.0, confidence))
+        if confidence >= EXECUTE_THRESHOLD:
+            decision = "execute"
+        elif confidence >= CONFIRM_THRESHOLD:
+            decision = "confirm"
+        else:
+            decision = "clarify"
+        return {
+            "confidence": round(confidence, 4),
+            "evidence": {k: round(v, 4) for k, v in present.items()},
+            "decision": decision,
+        }
