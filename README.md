@@ -1,1 +1,1 @@
-# Hackathon
+#Track: Multimodal — An adaptive interaction system that combines voice, visual gestures, and screen context to resolve ambiguous human intent and dynamically decide whether to act, clarify, or modify the interface.
