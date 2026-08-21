@@ -26,6 +26,15 @@ export interface Candidate {
   element_id: string;
   score: number;
   reason: string;
+  spatial_score?: number;
+  semantic_score?: number;
+  recency_score?: number;
+}
+
+export interface ScoreBreakdown {
+  spatial?: number | null;
+  semantic?: number | null;
+  recency?: number | null;
 }
 
 export interface EngineResponse {
@@ -39,6 +48,8 @@ export interface EngineResponse {
   explanation_text: string | null;
   action_plan: ActionStep[];
   latency_ms?: number;
+  semantic_entity?: string | null;
+  score_breakdown?: ScoreBreakdown | null;
 }
 
 export interface ActionStep {

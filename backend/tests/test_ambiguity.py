@@ -70,6 +70,12 @@ class TestSpeechSpatialConflict(unittest.TestCase):
         )
         self.assertFalse(has)
 
+    def test_no_conflict_unknown_entity(self):
+        has, _, _ = detect_speech_spatial_conflict(
+            "nonexistent_metric", 1.0, "users", self.ELEMENTS
+        )
+        self.assertFalse(has)
+
 
 if __name__ == "__main__":
     unittest.main()

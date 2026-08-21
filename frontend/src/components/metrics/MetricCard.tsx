@@ -21,7 +21,7 @@ export function MetricCard({
       data-intent-label={label}
       data-intent-type="metric_card"
       data-intent-value={value}
-      className={`rounded-xl bg-surface-card border border-surface-border p-5 cursor-pointer transition-all duration-300
+      className={`rounded-xl bg-surface-card border border-surface-border p-5 cursor-pointer transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent
         ${highlight ? 'intent-highlight' : ''}
         ${clarify ? 'intent-clarify' : ''}
         ${conflict ? 'intent-conflict' : ''}
@@ -30,6 +30,7 @@ export function MetricCard({
       onClick={() => onSelect?.(id)}
       role="button"
       tabIndex={0}
+      aria-pressed={clarify || highlight || conflict}
       aria-label={label}
       onKeyDown={(e) => { if (e.key === 'Enter') onSelect?.(id); }}
     >

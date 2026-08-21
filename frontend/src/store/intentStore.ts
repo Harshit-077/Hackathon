@@ -20,6 +20,7 @@ interface IntentState {
   timeline: TimelineEvent[];
   ttsEnabled: boolean;
   showDebug: boolean;
+  uiElementCount: number;
 
   setMode: (m: EngineMode) => void;
   setConnected: (v: boolean) => void;
@@ -56,6 +57,7 @@ export const useIntentStore = create<IntentState>((set, get) => ({
   timeline: [],
   ttsEnabled: true,
   showDebug: true,
+  uiElementCount: 0,
 
   setMode: (m) => set({ mode: m }),
   setConnected: (v) => set({ connected: v }),

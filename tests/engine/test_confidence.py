@@ -1,6 +1,6 @@
 """Engine confidence tests (root test suite)."""
 
-from backend.engine.confidence_fusion import fuse_confidence, WEIGHT_SPATIAL, WEIGHT_SEMANTIC
+from backend.engine.confidence import fuse_confidence, WEIGHT_SPATIAL, WEIGHT_SEMANTIC
 
 
 def test_fuse_confidence_weights():

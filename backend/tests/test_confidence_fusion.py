@@ -2,7 +2,7 @@
 
 import unittest
 
-from backend.engine.confidence_fusion import (
+from backend.engine.confidence import (
     WEIGHT_RECENCY,
     WEIGHT_SEMANTIC,
     WEIGHT_SPATIAL,

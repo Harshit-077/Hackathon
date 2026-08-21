@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { VoiceBar } from './components/voice/VoiceBar';
 import { ClarificationPanel } from './components/clarification/ClarificationPanel';
+import { ProcessingIndicator } from './components/layout/ProcessingIndicator';
 import { DebugPanel } from './components/debug/DebugPanel';
 import { useIntentStore } from './store/intentStore';
 import { usePointerTracking } from './hooks/usePointerTracking';
@@ -21,12 +22,18 @@ export default function App() {
   const ttsEnabled = useIntentStore((s) => s.ttsEnabled);
   const clearInteraction = useIntentStore((s) => s.clearInteraction);
   const lastResponse = useIntentStore((s) => s.lastResponse);
-  const { snapshot } = useUISnapshot();
+  const setUiElementCount = useCallback((n: number) => {
+    useIntentStore.setState({ uiElementCount: n });
+  }, []);
   const pointerRef = useRef({ x: 0, y: 0, element_id: null as string | null });
+
+  const { snapshot } = useUISnapshot();
 
   const buildEvent = useCallback(
     (type: ClientEvent['client_event_type'], transcript?: string, selectionId?: string): ClientEvent => {
       const elements = snapshot();
+      setUiElementCount(elements.length);
+      addTimeline('UI snapshot', `${elements.length} elements`);
       const ptr = pointerRef.current;
       return {
         session_id: sessionId,
@@ -38,7 +45,7 @@ export default function App() {
         ...(selectionId ? { selection: { element_id: selectionId } } : {}),
       };
     },
-    [sessionId, snapshot],
+    [sessionId, snapshot, setUiElementCount, addTimeline],
   );
 
   const { pointer } = usePointerTracking(setPointerTarget);
@@ -93,6 +100,7 @@ export default function App() {
       <main className="max-w-6xl mx-auto px-6 py-8 lg:mr-80">
         <Dashboard onSelect={handleSelect} />
       </main>
+      <ProcessingIndicator />
       <ClarificationPanel />
       <VoiceBar onSubmit={handleTextSubmit} onMic={startListening} supported={supported} />
       <DebugPanel />

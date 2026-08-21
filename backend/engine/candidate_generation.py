@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from backend.engine.confidence_fusion import (
+from backend.engine.confidence import (
     fuse_with_llm_raw,
     recency_bonus,
     semantic_match_score,
@@ -63,6 +63,9 @@ def generate_candidates(
         candidates.append({
             "element_id": eid,
             "score": round(fused, 4),
+            "spatial_score": round(sp, 4),
+            "semantic_score": round(sem, 4),
+            "recency_score": round(rec, 4),
             "reason": ", ".join(reasons) if reasons else "low signal",
         })
 

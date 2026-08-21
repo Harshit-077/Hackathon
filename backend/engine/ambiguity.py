@@ -90,7 +90,7 @@ def _normalize_entity_to_id(entity: str, elements: list[dict[str, Any]]) -> str 
             return el["id"]
         if entity_lower in el.get("label", "").lower():
             return el["id"]
-    return entity_lower
+    return None
 
 
 def _label_for_id(element_id: str, elements: list[dict[str, Any]]) -> str:

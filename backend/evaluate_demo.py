@@ -14,8 +14,8 @@ from __future__ import annotations
 import sys
 from typing import Any
 
-from backend.engine.engine import IntentEngine
-from backend.engine.llm_gateway_interface import generate_explanation, resolve_semantic
+from backend.engine.orchestrator import IntentEngine
+from backend.llm_gateway.gateway import generate_explanation, resolve_semantic
 from backend.engine.state import session_store
 
 # ---------------------------------------------------------------------------
@@ -149,12 +149,24 @@ DEMO_STEPS: list[dict[str, Any]] = [
         "event": _event(
             "speech_final",
             transcript="Make this bigger.",
-            pointer_x=600, pointer_y=500,  # no pointer target
+            pointer_x=600, pointer_y=500,
             pointer_element_id=None,
         ),
         "expect_decision": "execute",
         "expect_action": "resize",
         "expect_targets": ["revenue"],
+    },
+    {
+        "name": "Step 8: Filter to last 30 days",
+        "event": _event(
+            "speech_final",
+            transcript="Show me the last 30 days.",
+            pointer_x=850, pointer_y=270,
+            pointer_element_id="date_filter",
+        ),
+        "expect_decision": "execute",
+        "expect_action": "filter",
+        "expect_targets": ["date_filter"],
     },
 ]
 

@@ -67,6 +67,15 @@ class Candidate(BaseModel):
     element_id: str
     score: float
     reason: str
+    spatial_score: float | None = None
+    semantic_score: float | None = None
+    recency_score: float | None = None
+
+
+class ScoreBreakdown(BaseModel):
+    spatial: float | None = None
+    semantic: float | None = None
+    recency: float | None = None
 
 
 class Clarification(BaseModel):
@@ -90,3 +99,6 @@ class EngineResponse(BaseModel):
     clarification: Clarification = Field(default_factory=Clarification)
     explanation_text: str | None = None
     action_plan: list[ActionStep] = Field(default_factory=list)
+    semantic_entity: str | None = None
+    score_breakdown: ScoreBreakdown | None = None
+    latency_ms: float | None = None
