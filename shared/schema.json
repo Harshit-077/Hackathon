@@ -1,0 +1,106 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "IntentUI WebSocket Contract v1",
+  "definitions": {
+    "UIElement": {
+      "type": "object",
+      "required": ["id", "label", "type", "bbox"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "type": { "type": "string" },
+        "bbox": {
+          "type": "object",
+          "required": ["x", "y", "w", "h"],
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "w": { "type": "number" },
+            "h": { "type": "number" }
+          }
+        },
+        "value": { "type": ["string", "null"] }
+      }
+    },
+    "ClientEvent": {
+      "type": "object",
+      "required": ["session_id", "timestamp", "client_event_type"],
+      "properties": {
+        "session_id": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "client_event_type": {
+          "enum": ["speech_final", "pointer_click", "selection_resolved", "ui_snapshot"]
+        },
+        "speech": {
+          "type": "object",
+          "properties": { "transcript": { "type": ["string", "null"] } }
+        },
+        "pointer": {
+          "type": "object",
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "element_id": { "type": ["string", "null"] }
+          }
+        },
+        "selection": {
+          "type": "object",
+          "properties": { "element_id": { "type": "string" } }
+        },
+        "ui_context": {
+          "type": "object",
+          "properties": {
+            "elements": { "type": "array", "items": { "$ref": "#/definitions/UIElement" } }
+          }
+        }
+      }
+    },
+    "EngineResponse": {
+      "type": "object",
+      "required": ["session_id", "decision", "confidence"],
+      "properties": {
+        "type": { "const": "engine_response" },
+        "session_id": { "type": "string" },
+        "decision": { "enum": ["execute", "clarify", "error"] },
+        "intent": {
+          "type": "object",
+          "properties": {
+            "action": { "enum": ["explain", "compare", "resize", "filter", null] },
+            "targets": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "confidence": { "type": "number" },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "element_id": { "type": "string" },
+              "score": { "type": "number" },
+              "reason": { "type": "string" }
+            }
+          }
+        },
+        "clarification": {
+          "type": "object",
+          "properties": {
+            "message": { "type": "string" },
+            "highlight_ids": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "explanation_text": { "type": ["string", "null"] },
+        "action_plan": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": { "enum": ["highlight", "resize", "navigate", "speak"] },
+              "target": { "type": "string" },
+              "params": { "type": "object" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

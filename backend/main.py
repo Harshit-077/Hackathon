@@ -1,25 +1,33 @@
 """
 FastAPI app — thin WebSocket wiring for Intent Engine.
-
-Parses incoming JSON, calls the engine, serializes response per contract.
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import os
+import time
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import ValidationError
 
 from backend.engine.decision_log import decision_log
-from backend.engine.engine import IntentEngine
-from backend.engine.llm_gateway_interface import generate_explanation, resolve_semantic
+from backend.engine.orchestrator import IntentEngine
+from backend.llm_gateway.gateway import generate_explanation, get_provider_info, resolve_semantic
+from backend.models.schemas import ClientEvent, EngineResponse
 
-logging.basicConfig(level=logging.INFO)
+load_dotenv()
+
+logging.basicConfig(
+    level=getattr(logging, os.getenv("LOG_LEVEL", "INFO")),
+    format="%(asctime)s %(name)s %(levelname)s %(message)s",
+)
 logger = logging.getLogger("intent_engine")
 
-app = FastAPI(title="IntentUI Engine", version="0.1.0")
+app = FastAPI(title="IntentUI Engine", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -37,17 +45,37 @@ engine = IntentEngine(
 
 @app.get("/health")
 async def health() -> dict:
-    return {"status": "ok", "service": "intent-engine"}
+    info = get_provider_info()
+    return {
+        "status": "ok",
+        "service": "intent-engine",
+        "llm_provider": info["provider"],
+        "gemini_configured": bool(os.getenv("GEMINI_API_KEY")),
+        "groq_configured": bool(os.getenv("GROQ_API_KEY")),
+    }
 
 
 @app.get("/debug")
 async def debug(session_id: str | None = None, limit: int = 50) -> dict:
-    """Live decision log for frontend debug panel."""
     if session_id:
         entries = decision_log.get_by_session(session_id, limit)
     else:
         entries = decision_log.get_recent(limit)
-    return {"decisions": entries, "count": len(entries)}
+    info = get_provider_info()
+    return {
+        "decisions": entries,
+        "count": len(entries),
+        "llm_provider": info["provider"],
+        "fallback_count": info["fallback_count"],
+    }
+
+
+def _error_response(session_id: str, message: str) -> dict:
+    return EngineResponse(
+        session_id=session_id,
+        decision="error",
+        clarification={"message": message, "highlight_ids": []},
+    ).model_dump()
 
 
 @app.websocket("/ws")
@@ -58,24 +86,23 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     try:
         while True:
             raw = await websocket.receive_text()
+            start = time.perf_counter()
             try:
-                event = json.loads(raw)
-            except json.JSONDecodeError:
-                await websocket.send_json({
-                    "type": "engine_response",
-                    "session_id": "unknown",
-                    "decision": "error",
-                    "intent": {"action": None, "targets": []},
-                    "confidence": 0.0,
-                    "candidates": [],
-                    "clarification": {"message": "invalid JSON", "highlight_ids": []},
-                    "explanation_text": None,
-                    "action_plan": [],
-                })
+                data = json.loads(raw)
+                event = ClientEvent.model_validate(data)
+            except (json.JSONDecodeError, ValidationError) as exc:
+                await websocket.send_json(_error_response("unknown", str(exc)))
                 continue
 
-            response = engine.process_event(event)
-            await websocket.send_json({"type": "engine_response", **response})
+            try:
+                response = engine.process_event(event.to_engine_dict())
+                latency = round((time.perf_counter() - start) * 1000, 1)
+                response["latency_ms"] = latency
+                validated = EngineResponse.model_validate({**response, "type": "engine_response"})
+                await websocket.send_json(validated.model_dump())
+            except Exception as exc:
+                logger.exception("Engine error")
+                await websocket.send_json(_error_response(event.session_id, str(exc)))
 
     except WebSocketDisconnect:
         logger.info("WebSocket client disconnected")

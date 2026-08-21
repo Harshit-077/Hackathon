@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .intent-highlight {
+    @apply ring-2 ring-accent shadow-lg shadow-accent/30 transition-all duration-300;
+  }
+  .intent-clarify {
+    @apply ring-2 ring-amber-400 shadow-lg shadow-amber-400/30 animate-pulse;
+  }
+  .intent-conflict {
+    @apply ring-2 ring-rose-400 shadow-lg shadow-rose-400/40;
+  }
+  .intent-dimmed {
+    @apply opacity-40 pointer-events-none transition-opacity duration-300;
+  }
+  .intent-resize-large {
+    @apply col-span-2 row-span-2 scale-[1.02] z-10;
+  }
+}
