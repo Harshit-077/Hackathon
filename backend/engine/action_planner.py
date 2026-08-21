@@ -14,6 +14,7 @@ def build_action_plan(
     action: str,
     targets: list[str],
     explanation_text: str | None = None,
+    params: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Translate resolved intent into frontend-executable action steps."""
     plan: list[dict[str, Any]] = []
@@ -31,7 +32,7 @@ def build_action_plan(
             plan.append({
                 "type": "navigate",
                 "target": "compare_view",
-                "params": {"elements": targets[:2]},
+                "params": {"elements": targets[:2], **(params or {})},
             })
 
     elif action == "resize":
@@ -39,7 +40,17 @@ def build_action_plan(
         plan.append({"type": "resize", "target": target, "params": {"scale": 1.5}})
 
     elif action == "filter":
+        target = targets[0] if targets else "date_filter"
+        plan.append({
+            "type": "navigate",
+            "target": "filter_panel",
+            "params": {"element": target, **(params or {})},
+        })
+
+    elif action in ("query", "focus"):
         target = targets[0] if targets else ""
-        plan.append({"type": "navigate", "target": "filter_panel", "params": {"element": target}})
+        plan.append({"type": "highlight", "target": target, "params": {"duration_ms": 2000}})
+        if explanation_text:
+            plan.append({"type": "speak", "target": target, "params": {"text": explanation_text}})
 
     return plan

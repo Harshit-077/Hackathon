@@ -36,6 +36,11 @@ class SessionState:
     last_resolved_targets: list[str] = field(default_factory=list)
     pending: PendingClarification | None = None
     ui_elements: list[dict[str, Any]] = field(default_factory=list)
+    dataset: Any = None
+    filter_spec: dict[str, Any] | None = None
+    language: str = "english"
+    last_vision: dict[str, Any] | None = None
+    last_compare: dict[str, Any] | None = None
 
     def add_turn(self, turn: dict[str, Any]) -> None:
         self.turns.append(turn)

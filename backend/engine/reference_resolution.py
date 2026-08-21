@@ -1,15 +1,72 @@
 """
-Reference resolution — resolve pronouns against conversation history.
+Reference resolution — pronouns and deictics against history, pointer, and vision.
 
-Maps "this", "that", "it" to concrete element IDs using pointer position,
-session history, and ranked spatial candidates.
+Supports English (this/that/it/its) and Hindi/Hinglish (isko/usko/ye/uska).
 """
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
+from backend.engine.confidence import best_entity_match
 from backend.engine.state import SessionState
+
+THIS_REFS = {
+    "this", "this one", "ye", "yeh", "ye wala", "isko", "isey", "ise",
+    "this chart", "this metric", "this card",
+}
+IT_REFS = {"it", "its", "uska", "uske", "uski", "iska", "iske", "iski"}
+THAT_REFS = {"that", "that one", "usko", "usey", "wo", "woh", "the other one"}
+FIRST_REFS = {"the first one", "pehle wala", "first"}
+SECOND_REFS = {"the second one", "dusra", "second"}
+
+
+def normalize_pronoun(raw: str) -> str:
+    token = raw.lower().strip()
+    if token in THIS_REFS or token == "this":
+        return "this"
+    if token in IT_REFS:
+        return "it"
+    if token in THAT_REFS:
+        return "that"
+    if token in FIRST_REFS:
+        return "first"
+    if token in SECOND_REFS:
+        return "second"
+    return token
+
+
+def extract_pronouns(text: str) -> list[str]:
+    found: list[str] = []
+    text_lower = text.lower()
+    ordered = [
+        ("the other one", "that"),
+        ("the first one", "first"),
+        ("the second one", "second"),
+        ("ye wala", "this"),
+        ("this one", "this"),
+        ("that one", "that"),
+        ("isko", "this"),
+        ("usko", "that"),
+        ("uska", "it"),
+        ("uske", "it"),
+        ("iska", "it"),
+        ("this", "this"),
+        ("that", "that"),
+        ("its", "it"),
+        ("yeh", "this"),
+    ]
+    for pat, canon in ordered:
+        if pat in text_lower and canon not in found:
+            found.append(canon)
+    if re.search(r"\bit\b", text_lower) and "it" not in found:
+        found.append("it")
+    if re.search(r"\bye\b", text_lower) and "this" not in found:
+        found.append("this")
+    if re.search(r"\bwo\b", text_lower) and "that" not in found:
+        found.append("that")
+    return found
 
 
 def resolve_references(
@@ -18,32 +75,29 @@ def resolve_references(
     spatial_top_id: str | None,
     spatial_second_id: str | None,
     pointer_element_id: str | None,
+    vision_element_id: str | None = None,
 ) -> dict[str, str | None]:
-    """
-    Resolve each pronoun to an element id.
-
-    Rules (deterministic, explainable):
-        "this" → pointer element, else top spatial candidate
-        "it"   → last resolved element from session history
-        "that" → second spatial candidate, else second-to-last resolved
-
-    Returns:
-        Dict mapping pronoun → element_id (or None if unresolvable).
-    """
     resolved: dict[str, str | None] = {}
+    canon_refs = [normalize_pronoun(r) for r in references]
 
-    for ref in references:
+    for ref in canon_refs:
         if ref == "this":
-            resolved[ref] = pointer_element_id or spatial_top_id
+            resolved[ref] = pointer_element_id or vision_element_id or spatial_top_id
         elif ref == "it":
-            resolved[ref] = session.last_resolved_element_id
+            resolved[ref] = session.last_resolved_element_id or vision_element_id
         elif ref == "that":
-            if spatial_second_id and spatial_second_id != spatial_top_id:
+            if spatial_second_id and spatial_second_id != (pointer_element_id or spatial_top_id):
                 resolved[ref] = spatial_second_id
             elif len(session.last_resolved_targets) >= 2:
                 resolved[ref] = session.last_resolved_targets[-2]
+            elif vision_element_id and vision_element_id != pointer_element_id:
+                resolved[ref] = vision_element_id
             else:
                 resolved[ref] = spatial_second_id
+        elif ref == "first":
+            resolved[ref] = spatial_top_id
+        elif ref == "second":
+            resolved[ref] = spatial_second_id
         else:
             resolved[ref] = None
 
@@ -55,14 +109,12 @@ def build_compare_targets(
     ref_map: dict[str, str | None],
     explicit_entity: str | None,
     session: SessionState,
+    elements: list[dict[str, Any]] | None = None,
 ) -> list[str]:
-    """
-    Assemble target list for a compare action from pronouns + explicit entity.
-
-    Typical pattern: "compare it with this" → [it=history, this=pointer].
-    """
     targets: list[str] = []
-    refs = semantic.get("references", [])
+    refs = [normalize_pronoun(r) for r in semantic.get("references", [])]
+    extra_entities = semantic.get("entities") or []
+    els = elements or session.ui_elements
 
     if "it" in refs and ref_map.get("it"):
         targets.append(ref_map["it"])  # type: ignore[arg-type]
@@ -77,10 +129,16 @@ def build_compare_targets(
         if tid and tid not in targets:
             targets.append(tid)
 
-    if explicit_entity and explicit_entity not in targets:
-        targets.insert(0, explicit_entity)
+    if explicit_entity:
+        eid = best_entity_match(explicit_entity, els) or explicit_entity
+        if eid not in targets:
+            targets.insert(0, eid)
 
-    # Fallback: use last resolved if we only got one target for compare
+    for extra in extra_entities:
+        eid = best_entity_match(str(extra), els)
+        if eid and eid not in targets:
+            targets.append(eid)
+
     if len(targets) == 1 and session.last_resolved_element_id:
         other = session.last_resolved_element_id
         if other != targets[0]:
@@ -97,30 +155,37 @@ def build_single_target(
     session: SessionState,
     pointer_element_id: str | None = None,
     action: str | None = None,
+    vision_element_id: str | None = None,
+    elements: list[dict[str, Any]] | None = None,
 ) -> str | None:
-    """Resolve a single target for explain / resize / filter actions."""
+    els = elements or session.ui_elements
     if explicit_entity:
-        return explicit_entity
+        return best_entity_match(explicit_entity, els) or explicit_entity
 
-    refs = semantic.get("references", [])
+    refs = [normalize_pronoun(r) for r in semantic.get("references", [])]
 
-    # "it" always refers to conversation history
     if "it" in refs and session.last_resolved_element_id:
         return session.last_resolved_element_id
 
-    # "this" with no pointer hit → fall back to recent context
-    if "this" in refs and not pointer_element_id:
+    if "this" in refs:
+        if pointer_element_id:
+            return pointer_element_id
+        if vision_element_id:
+            return vision_element_id
         if session.last_resolved_element_id:
             return session.last_resolved_element_id
         if ref_map.get("this"):
             return ref_map["this"]
 
     if refs:
-        for pronoun in ("this", "that"):
+        for pronoun in ("that", "first", "second"):
             if pronoun in refs and ref_map.get(pronoun):
                 return ref_map[pronoun]
 
+    if pointer_element_id:
+        return pointer_element_id
+    if vision_element_id:
+        return vision_element_id
     if top_candidate_id:
         return top_candidate_id
-
     return session.last_resolved_element_id

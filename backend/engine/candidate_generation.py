@@ -25,6 +25,8 @@ def generate_candidates(
     llm_raw_confidence: float,
     last_resolved_id: str | None,
     pointer_element_id: str | None = None,
+    vision_element_id: str | None = None,
+    vision_confidence: float = 0.0,
 ) -> list[dict[str, Any]]:
     """
     Build a ranked list of candidate elements with fused confidence scores.
@@ -48,7 +50,8 @@ def generate_candidates(
 
         sem = semantic_match_score(semantic_entity, eid, label)
         rec = recency_bonus(eid, last_resolved_id)
-        fused = fuse_with_llm_raw(sp, sem, rec, llm_raw_confidence)
+        vis = vision_confidence if vision_element_id == eid else 0.0
+        fused = fuse_with_llm_raw(sp, sem, rec, llm_raw_confidence, vision=vis)
 
         reasons: list[str] = []
         if sp >= 0.9:
@@ -59,6 +62,8 @@ def generate_candidates(
             reasons.append("speech entity match")
         if rec >= 1.0:
             reasons.append("recent context")
+        if vis >= 0.5:
+            reasons.append("camera target")
 
         candidates.append({
             "element_id": eid,
@@ -66,6 +71,7 @@ def generate_candidates(
             "spatial_score": round(sp, 4),
             "semantic_score": round(sem, 4),
             "recency_score": round(rec, 4),
+            "vision_score": round(vis, 4),
             "reason": ", ".join(reasons) if reasons else "low signal",
         })
 
